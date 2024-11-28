@@ -1,21 +1,44 @@
-const express = require('express');
-const cors = require('cors');
-const dotenv = require('dotenv');
-
-dotenv.config();
+// server.js
+import express from 'express';
+import mongoose from 'mongoose';
+import cors from 'cors';
+import helmet from 'helmet';
+import routes from './routes/index.js';
+import { errorHandler } from './middleware/errorHandler';
 
 const app = express();
 
-// Middleware
+app.use(helmet());
 app.use(cors());
 app.use(express.json());
 
-// Routes
-app.get('/api/test', (req, res) => {
-  res.json({ message: 'Hello from the backend!' });
+// Health check route
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ status: 'OK', message: 'Server is running' });
 });
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+// Routes
+const router = express.Router();
+router.use('/auth', routes.auth);
+router.use('/admin', routes.admin);
+router.use('/series', routes.series);
+router.use('/episodes', routes.episodes);
+router.use('/dialogues', routes.dialogues);
+router.use('/artist', routes.artist);
+router.use('/director', routes.director);
+
+app.use('/api/v1', router);
+
+// 404 handler
+app.use('*', (req, res) => {
+  res.status(404).json({
+    success: false,
+    message: 'API endpoint not found'
+  });
 });
+
+app.use(errorHandler);
+
+mongoose.connect(process.env.MONGODB_URI);
+
+export default app;
